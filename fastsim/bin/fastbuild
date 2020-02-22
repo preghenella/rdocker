@@ -1,0 +1,335 @@
+#! /usr/bin/env bash
+
+commands="download build hepmc lhapdf pythia6 pythia8 rapgap agile sacrifice delphes"
+
+### MAIN ###
+main() {
+
+    # prepare software tree
+    mkdir -p $FAST_SOURCE
+    mkdir -p $FAST_INSTALL
+
+    export MAKEFLAGS=-j5
+    
+    # check if commands provided
+    if [ $# -gt 0 ]; then
+	commands="$@"
+    fi
+
+    # download and build HepMC
+    if [[ $commands =~ "hepmc" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_hepmc
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_hepmc
+	fi
+    fi
+	
+    # download and build LHAPDF
+    if [[ $commands =~ "lhapdf" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_lhapdf
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_lhapdf
+	fi
+    fi
+    
+    # download and build Pythia6
+    if [[ $commands =~ "pythia6" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_pythia6
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_pythia6
+	fi
+    fi
+    
+    # download and build Pythia8
+    if [[ $commands =~ "pythia8" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_pythia8
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_pythia8
+	fi
+    fi
+    
+    # download and build RapGap
+    if [[ $commands =~ "rapgap" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_rapgap
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_rapgap
+	fi
+    fi
+    
+    # download and build AGILe
+    if [[ $commands =~ "agile" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_agile
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_agile
+	fi
+    fi
+    
+    # download and build Sacrifice
+    if [[ $commands =~ "sacrifice" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_sacrifice
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_sacrifice
+	fi
+    fi
+
+    # download and build ROOT
+    if [[ $commands =~ "root" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_root
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_root
+	fi
+    fi
+
+    # download and build Delphes
+    if [[ $commands =~ "delphes" ]]; then
+	if [[ $commands =~ "download" ]]; then
+	    download_delphes
+	fi
+	if [[ $commands =~ "build" ]]; then
+	    build_delphes
+	fi
+    fi
+
+    # remove source code
+    # rm -rf $FAST_SOURCE
+}
+
+### HepMC ###
+download_hepmc() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading HepMC ---" && \
+	curl -k -L -O http://lcgapp.cern.ch/project/simu/HepMC/download/HepMC-2.06.09.tar.gz && \
+	echo "--- Extracting HepMC ---" && \
+	tar -zxf HepMC-2.06.09.tar.gz -C $FAST_SOURCE && \
+	rm HepMC-2.06.09.tar.gz
+}
+build_hepmc() {
+    SOURCE=$FAST_SOURCE/HepMC-2.06.09
+    INSTALL=$FAST_INSTALL/HepMC-2.06.09
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building HepMC ---" && \
+	./configure --with-momentum=GEV --with-length=CM --prefix=$INSTALL \
+	&& make && make install
+    cd -
+    rm -rf $FAST_INSTALL/HepMC
+    ln -s $INSTALL $FAST_INSTALL/HepMC
+}
+
+### Pythia6 ###
+download_pythia6() {
+    mkdir -p $FAST_SOURCE/pythia-6.4.28
+    echo "--- Downloading Pythia6 ---" && \
+	curl -k -L -O https://pythiasix.hepforge.org/downloads/pythia-6.4.28.tgz && \
+	echo "--- Extracting Pythia6 ---" && \
+	tar -zxf pythia-6.4.28.tgz -C $FAST_SOURCE/pythia-6.4.28 && \
+	rm pythia-6.4.28.tgz
+}
+build_pythia6() {
+    SOURCE=$FAST_SOURCE/pythia-6.4.28
+    INSTALL=$FAST_INSTALL/pythia-6.4.28
+    echo "--- Patching Pythia6 ---" && \
+	patch -N $SOURCE/Makefile $FAST_ROOT/patches/pythia-6.4.28/Makefile.patch.000 && \
+	patch -N $SOURCE/Makefile $FAST_ROOT/patches/pythia-6.4.28/Makefile.patch.001 && \
+	rm -rf $SOURCE/pdfset.f $SOURCE/struct*.f
+    mkdir -p $INSTALL/lib
+    cd $SOURCE
+    echo "--- Building Pythia6 ---" && \
+	make lib && \
+	echo "--- Installing Pythia6 ---" && \
+	cp libpythia.a $INSTALL/lib/libpythia6.a && \
+	cp libpythia.so $INSTALL/lib/libpythia6.so && \
+	ln -sf $INSTALL/lib/libpythia6.so $INSTALL/lib/libpythia6_dummy.so && \
+	ln -sf $INSTALL/lib/libpythia6.so $INSTALL/lib/libpythia6_pdfdummy.so
+    cd -
+    rm -rf $FAST_INSTALL/Pythia6
+    ln -s $INSTALL $FAST_INSTALL/Pythia6    
+}
+
+### Pythia8 ###
+download_pythia8() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading Pythia8 ---" && \
+	curl -k -L -O http://home.thep.lu.se/~torbjorn/pythia8/pythia8244.tgz && \
+	echo "--- Extracting Pythia8 ---" && \
+	tar -zxf pythia8244.tgz -C $FAST_SOURCE && \
+	rm pythia8244.tgz
+}
+build_pythia8() {
+    SOURCE=$FAST_SOURCE/pythia8244
+    INSTALL=$FAST_INSTALL/pythia8244
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building Pythia8 ---" && \
+	./configure --enable-shared --with-hepmc2=$HEPMC_ROOT --with-lhapdf6=$LHAPDF_ROOT --prefix=$INSTALL && \
+	make && make install 
+    cd -
+    rm -rf $FAST_INSTALL/Pythia8 
+    ln -s $INSTALL $FAST_INSTALL/Pythia8 
+}
+
+### RapGap ###
+download_rapgap() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading RapGap ---" && \
+	curl -k -O -L https://rapgap.hepforge.org/downloads/rapgap-3.303.tar.gz && \
+	echo "--- Extracting RapGap ---" && \
+	tar -zxf rapgap-3.303.tar.gz -C $FAST_SOURCE && \
+	rm rapgap-3.303.tar.gz
+}
+build_rapgap() {
+
+    apt-get -y install texlive-latex-base texlive-latex-extra
+
+    SOURCE=$FAST_SOURCE/rapgap-3.303
+    INSTALL=$FAST_INSTALL/rapgap-3.303
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building RapGap ---" && \
+	./configure --disable-shared --with-pythia6=$PYTHIA6_ROOT --with-hepmc=$HEPMC_ROOT --with-lhapdf=$LHAPDF_ROOT --prefix=$INSTALL && \
+	make && make install 
+    cd -
+    rm -rf $FAST_INSTALL/RapGap 
+    ln -s $INSTALL $FAST_INSTALL/RapGap 
+
+    apt-get -y remove texlive-latex-base texlive-latex-extra
+}
+
+### LHAPDF ###
+download_lhapdf() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading LHAPDF ---" && \
+	curl -k -L -O https://lhapdf.hepforge.org/downloads/LHAPDF-6.2.3.tar.gz
+	echo "--- Extracting LHAPDF ---" && \
+	tar -zxf LHAPDF-6.2.3.tar.gz -C $FAST_SOURCE && \
+	rm LHAPDF-6.2.3.tar.gz
+}
+build_lhapdf() {
+    SOURCE=$FAST_SOURCE/LHAPDF-6.2.3
+    INSTALL=$FAST_INSTALL/LHAPDF-6.2.3
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building LHAPDF ---" && \
+	./configure --prefix=$INSTALL && \
+	make && make install
+    cd -
+    rm -rf $FAST_INSTALL/LHAPDF
+    ln -s $INSTALL $FAST_INSTALL/LHAPDF
+}
+
+### AGILe ###
+download_agile() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading AGILe ---" && \
+	curl -k -L -O https://agile.hepforge.org/downloads/AGILe-1.5.0b1.tar.gz
+	echo "--- Extracting AGILe ---" && \
+	tar -zxf AGILe-1.5.0b1.tar.gz -C $FAST_SOURCE && \
+	rm AGILe-1.5.0b1.tar.gz
+}
+build_agile() {
+    SOURCE=$FAST_SOURCE/AGILe-1.5.0b1
+    INSTALL=$FAST_INSTALL/AGILe-1.5.0b1
+    echo "--- Patching AGILe ---" && \
+	patch -N $SOURCE/src/FPythia/FPythia.cc $FAST_ROOT/patches/AGILe-1.5.0b1/src/FPythia/FPythia.cc.patch && \
+	patch -N $SOURCE/bin/agile-runmc $FAST_ROOT/patches/AGILe-1.5.0b1/bin/agile-runmc.patch
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building AGILe ---" && \
+	./configure --with-hepmc=$HEPMC_ROOT --prefix=$INSTALL && \
+	make && make install
+    cd -
+    rm -rf $FAST_INSTALL/AGILe
+    ln -s $INSTALL $FAST_INSTALL/AGILe
+}
+
+### Sacrifice ###
+download_sacrifice() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading Sacrifice ---" && \
+	curl -k -L -O https://agile.hepforge.org/downloads/Sacrifice-1.1.2.tar.gz
+	echo "--- Extracting Sacrifice ---" && \
+	tar -zxf Sacrifice-1.1.2.tar.gz -C $FAST_SOURCE && \
+	rm Sacrifice-1.1.2.tar.gz
+}
+build_sacrifice() {
+    SOURCE=$FAST_SOURCE/Sacrifice-1.1.2
+    INSTALL=$FAST_INSTALL/Sacrifice-1.1.2
+    mkdir -p $INSTALL
+    cd $SOURCE
+    echo "--- Building Sacrifice ---" && \
+	autoreconf -ivf && \
+	./configure --with-HepMC=$HEPMC_ROOT --with-LHAPDF=$LHAPDF_ROOT --with-pythia=$PYTHIA8_ROOT --prefix=$INSTALL && \
+	make && make install
+    cd -
+    rm -rf $FAST_INSTALL/Sacrifice
+    ln -s $INSTALL $FAST_INSTALL/Sacrifice
+}
+
+### ROOT ###
+download_root() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading ROOT ---" && \
+	curl -k -L -O https://root.cern.ch/download/root_v6.14.04.source.tar.gz && \
+	echo "--- Extracting ROOT ---" && \
+	tar zxf root_v6.14.04.source.tar.gz -C $FAST_SOURCE && \
+	rm root_v6.14.04.source.tar.gz
+}
+build_root() {
+    SOURCE=$FAST_SOURCE/root-6.14.04
+    INSTALL=$FAST_INSTALL/root-6.14.04
+    mkdir -p $INSTALL
+    cd $SOURCE
+    mkdir obj
+    cd obj
+    echo "--- Building ROOT ---" && \
+	cmake $SOURCE -DCMAKE_INSTALL_PREFIX=$INSTALL -Dpythia6_nolink=ON -DPYTHIA8_DATA=$PYTHIA8DATA && \
+	make && make install && cd ..    
+    cd -
+    rm -rf $FAST_INSTALL/ROOT
+    ln -s $INSTALL $FAST_INSTALL/ROOT
+}
+
+### Delphes ###
+download_delphes() {
+    mkdir -p $FAST_SOURCE
+    echo "--- Downloading Delphes ---" && \
+	curl -k -L -O https://github.com/preghenella/delphes/archive/3.4.2pre17-r+dev.tar.gz && \
+	echo "--- Extracting Delphes ---" && \
+	tar zxf 3.4.2pre17-r+dev.tar.gz -C $FAST_SOURCE && \
+	rm 3.4.2pre17-r+dev.tar.gz
+}
+build_delphes() {
+    SOURCE=$FAST_SOURCE/delphes-3.4.2pre17-r-dev
+    INSTALL=$FAST_INSTALL/delphes-3.4.2pre17-r-dev
+    echo "--- Patching Delphes ---" && \
+    mkdir -p $INSTALL
+    cd $SOURCE
+    mkdir obj
+    cd obj
+    echo "--- Building Delphes ---" && \
+	cmake $SOURCE -DCMAKE_POLICY_DEFAULT_CMP0074=NEW -DCMAKE_INSTALL_PREFIX=$INSTALL && \
+	make && make install && cd ..    
+    cd -
+    rm -rf $FAST_INSTALL/Delphes
+    ln -s $INSTALL $FAST_INSTALL/Delphes
+}
+
+
+
+main $@
